@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sasta Sale Online Offers | Premium Deals</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.34/dist/lenis.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #F9F4F1;
+            --primary-color: #6C301C;
+            --accent-color: #A34E32;
+            --white: #FFFFFF;
+            --shadow: rgba(108, 48, 28, 0.12);
+        }
+        
+        html.lenis { height: auto; }
+        .lenis.lenis-smooth { scroll-behavior: auto !important; }
+        .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+        .lenis.lenis-stopped { overflow: hidden; }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif; 
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .editorial-text {
+            font-family: 'Playfair Display', serif;
+        }
+
+        #particle-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1; pointer-events: none;
+        }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 50px; background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        .logo-container img { height: 60px; width: auto; }
+
+        .join-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: var(--white); padding: 12px 30px; text-decoration: none;
+            border-radius: 30px; font-weight: 600; transition: all 0.4s ease;
+            box-shadow: 0 10px 20px var(--shadow);
+            text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem;
+        }
+        .join-btn:hover { transform: translateY(-3px) scale(1.03); }
+
+        section { padding: 80px 50px; position: relative; }
+        
+        h2 { 
+            text-align: center; font-weight: 600; letter-spacing: 1px; 
+            margin-bottom: 60px; font-size: 2.8rem; font-style: italic;
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+        }
+
+        .grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 40px; max-width: 1200px; margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px); border-radius: 20px; padding: 25px;
+            text-align: center; box-shadow: 0 20px 40px var(--shadow);
+            display: flex; flex-direction: column; justify-content: space-between;
+            transform-style: preserve-3d; border: 1px solid rgba(255,255,255,0.7);
+            opacity: 0; visibility: hidden;
+        }
+
+        .card img {
+            width: 100%; height: 220px; object-fit: cover;
+            border-radius: 15px; margin-bottom: 20px;
+            transform: translateZ(50px); box-shadow: 0 15px 25px rgba(0,0,0,0.1);
+        }
+
+        .cc-img {
+            object-fit: contain !important; height: 180px !important;
+            background: transparent; box-shadow: none !important;
+            transform: translateZ(60px) rotateY(-5deg); 
+        }
+
+        .card h3 { 
+            font-size: 1.4rem; margin-bottom: 20px; transform: translateZ(30px);
+            line-height: 1.3; font-weight: 600;
+        }
+        
+        .buy-btn {
+            display: inline-block; background: var(--white);
+            color: var(--primary-color); border: 1px solid var(--primary-color);
+            padding: 12px 25px; text-decoration: none; border-radius: 30px;
+            font-weight: 600; transition: 0.3s; transform: translateZ(40px);
+            text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.85rem;
+        }
+
+        .buy-btn:hover { background: var(--primary-color); color: var(--white); }
+
+        #telegram-feed {
+            background: linear-gradient(135deg, #1A1A1A, var(--primary-color));
+            color: var(--white); border-radius: 0 0 50px 50px;
+        }
+        #telegram-feed h2 { color: var(--bg-color); }
+        
+        /* Forces the text inside the Telegram cards to be black */
+        #telegram-feed .card h3 {
+            color: #000000;
+        }
+
+        .about-card {
+            max-width: 600px; margin: 0 auto; opacity: 0; transform-style: preserve-3d;
+        }
+        .about-card h3 { font-size: 2rem; transform: translateZ(40px); font-style: italic; }
+        .about-card p { transform: translateZ(30px); line-height: 1.6; font-size: 1.05rem; }
+        .about-card a { color: var(--accent-color); text-decoration: none; font-weight: 600; }
+        .creator-tag { font-weight: 600; font-size: 1.2rem; transform: translateZ(50px); margin-top: 15px; }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <header>
+        <div class="logo-container">
+            <img src="T-logo.png" alt="Sasta Sale Logo" class="nav-logo">
+        </div>
+        <a href="https://t.me/sasta_store_offers" target="_blank" class="join-btn">Join Channel</a>
+    </header>
+
+    <section id="telegram-feed">
+        <h2 class="section-title">Live Drops from Telegram</h2>
+        <div class="grid" id="live-offers-container">
+            <!-- Telegram cards spawn here -->
+        </div>
+    </section>
+
+    <section>
+        <h2 class="section-title">Premium Credit Cards</h2>
+        <div class="grid" id="cc-grid"></div>
+    </section>
+
+    <section>
+        <h2 class="section-title">Top Footwear Deals</h2>
+        <div class="grid" id="shoes-grid"></div>
+    </section>
+
+    <section>
+        <h2 class="section-title">Trending Apparel</h2>
+        <div class="grid" id="shirts-grid"></div>
+    </section>
+
+    <section id="about">
+        <h2 class="section-title">About Us</h2>
+        <div class="card about-card" id="about-container">
+            <h3>Sasta Sale Online Offers</h3>
+            <p>Your one-stop destination for the most exclusive drops, heaviest discounts, and premium shopping deals directly to your screen.</p>
+            <div style="margin-top: 25px; transform: translateZ(40px);">
+                <p>🚀 <strong>Telegram:</strong> <a href="https://t.me/sasta_store_offers" target="_blank">@sasta_store_offers</a></p>
+                <p>📸 <strong>Instagram:</strong> <a href="https://instagram.com/saumy_30234" target="_blank">@saumy_30234</a></p>
+            </div>
+            <hr style="border: 0; border-top: 1px solid rgba(108, 48, 28, 0.2); margin: 25px 0; transform: translateZ(20px);">
+            <p class="creator-tag editorial-text">Created by Saumy</p>
+        </div>
+    </section>
+
+    <script>
+        const ccDeals = [
+            { link: "https://bitli.in/UQ8L016", img: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=500&auto=format&fit=crop&q=60" },
+            { link: "https://bitli.in/O18Bvc2", img: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=500&auto=format&fit=crop&q=60" },
+            { link: "https://bitli.in/7q9obul", img: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=500&auto=format&fit=crop&q=60" },
+            { link: "https://bitli.in/w4BI27r", img: "https://images.unsplash.com/photo-1620714223084-8fcacc6dfd8d?w=500&auto=format&fit=crop&q=60" },
+            { link: "https://bitli.in/ebow1sn", img: "https://images.unsplash.com/photo-1589758438368-0ad531db3366?w=500&auto=format&fit=crop&q=60" },
+            { link: "https://bitli.in/v2lMwNq", img: "https://images.unsplash.com/photo-1556740758-90de374c12ad?w=500&auto=format&fit=crop&q=60" } 
+        ];
+        
+        const shoeDeals = [
+            { link: "https://ajiio.in/haFY7yb", img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500" },
+            { link: "https://ajiio.in/rk2WbtB", img: "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=500" },
+            { link: "https://myntr.it/tUbOUG4", img: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=500" },
+            { link: "https://myntr.it/wgM0lx8", img: "https://images.unsplash.com/photo-1514989940723-e8e51635b782?w=500" },
+            { link: "https://fktr.in/x1vginv", img: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500" }
+        ];
+        
+        const shirtDeals = [
+            { link: "https://myntr.it/viC3D7D", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500" },
+            { link: "https://fktr.in/zLU33EH", img: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500" },
+            { link: "https://ajiio.in/1l12trN", img: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500" }, 
+            { link: "https://ajiio.in/LvDsstg", img: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500" },
+            { link: "https://myntr.it/Ppwu9MY", img: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=500" },
+            { link: "https://myntr.it/8pSItVX", img: "https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?w=500" }
+        ];
+
+        const tiltConfig = {
+            max: 8,              
+            speed: 1000,         
+            glare: true, 
+            "max-glare": 0.25,   
+            scale: 1.02,         
+            easing: "cubic-bezier(.03,.98,.52,.99)" 
+        };
+
+        function renderCards(containerId, items, isCC = false) {
+            const container = document.getElementById(containerId);
+            items.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'card item-animate'; 
+                
+                const imgClass = isCC ? 'cc-img' : '';
+                const title = isCC ? `Premium Card ${index + 1}` : 'Exclusive Offer';
+
+                card.innerHTML = `
+                    <img src="${item.img}" alt="Product Image" class="${imgClass}">
+                    <h3>${title}</h3>
+                    <a href="${item.link}" target="_blank" class="buy-btn">Apply / View</a>
+                `;
+                container.appendChild(card);
+                VanillaTilt.init(card, tiltConfig);
+            });
+        }
+
+        renderCards('cc-grid', ccDeals, true);
+        renderCards('shoes-grid', shoeDeals);
+        renderCards('shirts-grid', shirtDeals);
+        VanillaTilt.init(document.getElementById('about-container'), tiltConfig);
+
+        async function fetchTelegramOffers() {
+            const feedContainer = document.getElementById('live-offers-container');
+            try {
+                const response = await fetch('/api/offers');
+                const offers = await response.json();
+                feedContainer.innerHTML = '';
+                
+                if(offers.length === 0) {
+                    feedContainer.innerHTML = '<p style="text-align:center; color:white; grid-column: 1 / -1; font-family: Outfit;">Waiting for new offers...</p>';
+                } else {
+                    offers.forEach((offer) => {
+                        const card = document.createElement('div');
+                        card.className = 'card item-animate';
+                        
+                        const displayImage = offer.image ? offer.image : 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500';
+                        const shortText = offer.text.length > 50 ? offer.text.substring(0, 50) + "..." : offer.text;
+
+                        card.innerHTML = `
+                            <img src="${displayImage}" alt="Telegram Offer" style="border: 1px solid rgba(108, 48, 28, 0.2);">
+                            <h3>${shortText}</h3>
+                            <a href="https://t.me/sasta_store_offers/${offer.id}" target="_blank" class="buy-btn">View Details</a>
+                        `;
+                        feedContainer.appendChild(card);
+                        VanillaTilt.init(card, tiltConfig);
+                    });
+                }
+            } catch (error) {
+                feedContainer.innerHTML = '<p style="text-align:center; color:white; grid-column: 1 / -1; font-family: Outfit;">Backend not connected.</p>';
+            }
+        }
+
+        async function initAnimations() {
+            await fetchTelegramOffers();
+
+            const lenis = new Lenis({ duration: 1.5, wheelMultiplier: 0.8, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+            function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+            requestAnimationFrame(raf);
+
+            gsap.registerPlugin(ScrollTrigger);
+
+            gsap.utils.toArray('.section-title').forEach(title => {
+                gsap.from(title, {
+                    scrollTrigger: { trigger: title, start: "top 85%" },
+                    y: 40, opacity: 0, duration: 1.2, ease: "power3.out"
+                });
+            });
+
+            gsap.utils.toArray('.grid').forEach(grid => {
+                const cards = grid.querySelectorAll('.card');
+                if(cards.length > 0) {
+                    gsap.to(cards, {
+                        scrollTrigger: { trigger: grid, start: "top 85%" },
+                        autoAlpha: 1, y: 0, rotationX: 0, 
+                        duration: 1.2, stagger: 0.1, ease: "power3.out", 
+                        startAt: { y: 60, rotationX: 15, opacity: 0 } 
+                    });
+                }
+            });
+
+            gsap.to('.about-card', {
+                scrollTrigger: { trigger: '#about', start: "top 85%" },
+                autoAlpha: 1, y: 0, rotationX: 0, duration: 1.2, ease: "power3.out",
+                startAt: { y: 60, rotationX: 15, opacity: 0 }
+            });
+        }
+
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize); resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width; this.y = Math.random() * height;
+                this.size = Math.random() * 2; this.speedY = Math.random() * -1 - 0.2; 
+            }
+            update() {
+                this.y += this.speedY;
+                if (this.y < 0) { this.y = height; this.x = Math.random() * width; }
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(108, 48, 28, 0.15)'; 
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        for (let i = 0; i < 40; i++) particles.push(new Particle());
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+        
+        initAnimations();
+        animateParticles();
+    </script>
+</body>
+</html>
