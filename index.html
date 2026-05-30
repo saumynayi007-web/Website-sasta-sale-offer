@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sasta Sale Online Offers | Premium Deals</title>
     
+    <meta name="description" content="Sasta Sale Online Offers brings you the most exclusive drops, heavy discounts, and premium shopping deals directly to your screen. Get the best prices on footwear, apparel, and credit cards.">
+    <meta name="keywords" content="sasta sale, online offers, discount shoes, credit card deals, cheap shopping, telegram offers, loot deals">
+    <meta name="author" content="Saumy">
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:title" content="Sasta Sale Online Offers | Premium Deals">
+    <meta property="og:description" content="Join our community for the best loot deals and exclusive shopping offers.">
+    <meta property="og:image" content="T-logo.png">
+    <meta property="og:url" content="https://sasta-sale-offers.onrender.com">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
@@ -148,9 +158,12 @@
     <section id="telegram-feed">
         <h2 class="section-title">Live Drops from Telegram</h2>
         <div class="grid" id="live-offers-container">
-            <!-- Telegram cards spawn here -->
-        </div>
+            </div>
     </section>
+
+    <section style="padding: 20px 50px; text-align: center;">
+        
+        </section>
 
     <section>
         <h2 class="section-title">Premium Credit Cards</h2>
@@ -182,6 +195,7 @@
     </section>
 
     <script>
+        // 🛍️ 4. HARDCODED DEALS: Edit links & images here to change the permanent products 🛍️
         const ccDeals = [
             { link: "https://bitli.in/UQ8L016", img: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=500&auto=format&fit=crop&q=60" },
             { link: "https://bitli.in/O18Bvc2", img: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=500&auto=format&fit=crop&q=60" },
@@ -244,6 +258,7 @@
         async function fetchTelegramOffers() {
             const feedContainer = document.getElementById('live-offers-container');
             try {
+                // Pointing to '/api/offers' so it works on Render/GitHub deployment
                 const response = await fetch('/api/offers');
                 const offers = await response.json();
                 feedContainer.innerHTML = '';
