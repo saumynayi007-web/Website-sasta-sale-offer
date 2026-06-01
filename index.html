@@ -72,12 +72,17 @@
             position: sticky; top: 0; z-index: 100;
             transition: box-shadow 0.3s ease;
         }
-        .logo-container img { 
+      .logo-container img { 
             height: 60px; 
-            width: auto; 
-            border-radius: 12px; /* Controls how rounded the corners are */
-            object-fit: cover;
-        
+            width: 60px;          /* 1. Forces a perfect square canvas */
+            
+            /* 🟢 THE AESTHETIC CORNER RADIUS 🟢 */
+            border-radius: 14px;  /* 2. Provides the premium squircle curve */
+            
+            /* 🟢 THE AESTHETIC BREATHING ROOM 🟢 */
+            margin: 6px 12px;     /* 3. Top/Bottom 6px, Left/Right 12px */
+            
+            object-fit: cover;    /* 4. Prevents your logo from squishing */
         }
 
         .join-btn {
