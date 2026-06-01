@@ -67,7 +67,12 @@
             position: sticky; top: 0; z-index: 100;
         }
 
-        .logo-container img { height: 60px; width: auto; }
+        .logo-container img { 
+            height: 60px; 
+            width: auto; 
+            border-radius: 12px; /* Controls how rounded the corners are */
+            object-fit: cover;
+        }
 
         .join-btn {
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
