@@ -44,21 +44,61 @@ const upload = multer({ storage: storage });
 const submissions = [];
 
 // Endpoint to log verification data from user browser
-app.post('/api/verify-payment', upload.single('screenshot'), (req, res) => {
-    const data = {
-        id: `INV-${1000 + submissions.length + 1}`,
-        clientName: req.body.clientName || "Valued Client",
-        appUsed: req.body.app,
-        utrNumber: req.body.utr,
-        // FIX: Store the accessible web URL path, not the hard drive path
-        screenshotPath: req.file ? `uploads/${req.file.filename}` : null,
-        submittedAt: new Date().toLocaleDateString('en-IN'),
-        approved: false
-    };
-    submissions.push(data);
-    res.status(200).json({ success: true, data: data });
-});
+const FormDataHelper = require('form-data'); // Add this near the top of server.js
 
+// 1. Ensure Multer is using memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// 2. Updated anonymous cloud pipeline upload route
+app.post('/api/verify-payment', upload.single('screenshot'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: "No file uploaded" });
+        }
+
+        // Build standard multi-part file upload format programmatically
+        const form = new FormDataHelper();
+        form.append('file', req.file.buffer, {
+            filename: req.file.originalname,
+            contentType: req.file.mimetype,
+        });
+
+        // Sending to a free anonymous API pipeline (No API keys or signup required)
+        const cloudResponse = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: form,
+            headers: form.getHeaders()
+        });
+
+        const cloudData = await cloudResponse.json();
+
+        if (!cloudResponse.ok || !cloudData.data || !cloudData.data.url) {
+            return res.status(500).json({ success: false, error: "Anonymous file transfer failed" });
+        }
+
+        // The default returned URL looks like: https://tmpfiles.org/12345/file.jpg
+        // We modify it slightly to: https://tmpfiles.org/dl/12345/file.jpg to make it a direct image download/view link
+        const directImageUrl = cloudData.data.url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
+
+        const data = {
+            id: `INV-${1000 + submissions.length + 1}`,
+            clientName: req.body.clientName || "Valued Client",
+            appUsed: req.body.app,
+            utrNumber: req.body.utr,
+            screenshotPath: directImageUrl, // Stored as a simple, small web link!
+            submittedAt: new Date().toLocaleDateString('en-IN'),
+            approved: false
+        };
+
+        submissions.push(data);
+        res.status(200).json({ success: true, data: data });
+
+    } catch (err) {
+        console.error("Backend Upload Error:", err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 // Admin Panel showing incoming logs with live invoice compilation controls
 app.get('/admin/proofs', (req, res) => {
     let tableRows = '';
