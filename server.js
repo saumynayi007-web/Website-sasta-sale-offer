@@ -5,41 +5,56 @@ const fs = require('fs');
 const app = express();
 
 app.use(express.json());
+app.use(express.static('.')); 
 app.use(express.static(path.join(__dirname, '.')));
 
-// 1. Switch Multer to memory storage (no hard drive folders required)
-const storage = multer.memoryStorage();
+
+// This correctly maps the URL path "/uploads" to the physical server folder "/tmp/uploads"
+app.use('/uploads', express.static('/tmp/uploads'));
+app.use(express.static(__dirname));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/logo.jpg', (req, res) => {
+    res.sendFile(path.join(__dirname, 'logo.jpg'));
+});
+
+app.get('/favicon.png', (req, res) => {
+    res.sendFile(path.join(__dirname, 'favicon.png'));
+});
+
+
+if (!fs.existsSync('/tmp/uploads')) {
+    fs.mkdirSync('/tmp/uploads', { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => { 
+        cb(null, '/tmp/uploads/'); 
+    },
+    filename: (req, file, cb) => {
+        const utr = req.body.utr || 'unknown';
+        cb(null, `${utr}-${Date.now()}${path.extname(file.originalname)}`);
+    }
+});
 const upload = multer({ storage: storage });
 
 // Local database state array
 const submissions = [];
 
-// Fallback image routes for branding assets
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/logo.jpg', (req, res) => res.sendFile(path.join(__dirname, 'logo.jpg')));
-app.get('/favicon.png', (req, res) => res.sendFile(path.join(__dirname, 'favicon.png')));
-app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'favicon.png')));
-
-// 2. Updated endpoint that encodes your file into absolute text string payloads
+// Endpoint to log verification data from user browser
 app.post('/api/verify-payment', upload.single('screenshot'), (req, res) => {
-    let screenshotDataUrl = null;
-
-    if (req.file) {
-        // Formats the image into a browser-readable Base64 Data URL string
-        const base64Image = req.file.buffer.toString('base64');
-        screenshotDataUrl = `data:${req.file.mimetype};base64,${base64Image}`;
-    }
-
     const data = {
         id: `INV-${1000 + submissions.length + 1}`,
         clientName: req.body.clientName || "Valued Client",
         appUsed: req.body.app,
         utrNumber: req.body.utr,
-        screenshotPath: screenshotDataUrl, // Saves the entire image as simple text string data
+        // FIX: Store the accessible web URL path, not the hard drive path
+        screenshotPath: req.file ? `uploads/${req.file.filename}` : null,
         submittedAt: new Date().toLocaleDateString('en-IN'),
         approved: false
     };
-
     submissions.push(data);
     res.status(200).json({ success: true, data: data });
 });
@@ -55,8 +70,8 @@ app.get('/admin/proofs', (req, res) => {
                 <td>${item.clientName}</td>
                 <td>${item.appUsed}</td>
                 <td style="font-weight: bold; color: #dfcaa7;">${item.utrNumber}</td>
-              // REMOVE the leading slash "/" right here:
-<td><a href="${item.screenshotPath}" target="_blank"><img src="${item.screenshotPath}" width="80"></a></td>
+                <td><a href="/${item.screenshotPath}" target="_blank"><img src="/${item.screenshotPath}" width="80"></a></td>
+                <td>
                     ${item.approved ? 
                         `<a href="/admin/invoice/${item.id}" target="_blank" style="color: #10b981; text-decoration:none; font-weight:bold;">📄 View Active Bill</a>` : 
                         `<button onclick="approvePayment('${item.id}')" style="background:#dfcaa7; border:none; padding:6px 12px; font-weight:bold; cursor:pointer; border-radius:4px;">Approve & Bill</button>`
