@@ -70,7 +70,12 @@ app.get('/admin/proofs', (req, res) => {
                 <td>${item.clientName}</td>
                 <td>${item.appUsed}</td>
                 <td style="font-weight: bold; color: #dfcaa7;">${item.utrNumber}</td>
-                <td><a href="/${item.screenshotPath}" target="_blank"><img src="/${item.screenshotPath}" width="80"></a></td>
+                <td>
+                    ${item.screenshotPath ? 
+                        `<img src="${item.screenshotPath}" width="80" style="border: 1px solid #1e293b; cursor: pointer;" onclick="viewImage('${item.screenshotPath}')">` : 
+                        `<span style="color:#636f8a;">No Image</span>`
+                    }
+                </td>
                 <td>
                     ${item.approved ? 
                         `<a href="/admin/invoice/${item.id}" target="_blank" style="color: #10b981; text-decoration:none; font-weight:bold;">📄 View Active Bill</a>` : 
@@ -89,7 +94,12 @@ app.get('/admin/proofs', (req, res) => {
                 table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
                 th, td { border: 1px solid #1e293b; padding: 14px; text-align: left; }
                 th { background: #0d111a; color: #dfcaa7; }
-                img { border-radius: 4px; }
+                img { border-radius: 4px; display: block; max-height: 50px; object-fit: contain; }
+                
+                /* Modal Styling */
+                .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; }
+                .modal-content { max-width: 90%; max-height: 90%; border: 2px solid #dfcaa7; border-radius: 8px; }
+                .close-btn { position: absolute; top: 20px; right: 35px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; }
             </style>
             <script>
                 function approvePayment(id) {
@@ -99,6 +109,17 @@ app.get('/admin/proofs', (req, res) => {
                         body: JSON.stringify({ id: id })
                     }).then(() => window.location.reload());
                 }
+
+                // Modal Functions to bypass URI_TOO_LONG
+                function viewImage(src) {
+                    const modal = document.getElementById('imgModal');
+                    const modalImg = document.getElementById('modalTarget');
+                    modal.style.display = "flex";
+                    modalImg.src = src;
+                }
+                function closeModal() {
+                    document.getElementById('imgModal').style.display = "none";
+                }
             </script>
         </head>
         <body>
@@ -107,6 +128,12 @@ app.get('/admin/proofs', (req, res) => {
                 <tr><th>Invoice ID</th><th>Date</th><th>Client Name</th><th>App</th><th>UTR / Ref Number</th><th>Screenshot</th><th>Action Panel</th></tr>
                 ${tableRows || '<tr><td colspan="7" style="text-align:center; color:#636f8a;">No transactions awaiting clearance.</td></tr>'}
             </table>
+
+            <!-- Lightbox Modal container -->
+            <div id="imgModal" class="modal" onclick="closeModal()">
+                <span class="close-btn">&times;</span>
+                <img class="modal-content" id="modalTarget" style="max-height: 85vh;">
+            </div>
         </body>
         </html>
     `);
