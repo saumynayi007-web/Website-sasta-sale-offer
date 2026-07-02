@@ -1,319 +1,83 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cors = require('cors');
+const axios = require('axios');
+const cheerio = require('cheerio');
+
 const app = express();
+app.use(cors());
 
-app.use(express.json());
-app.use(express.static('.')); 
-app.use(express.static(path.join(__dirname, '.')));
-
-
-// This correctly maps the URL path "/uploads" to the physical server folder "/tmp/uploads"
-app.use('/uploads', express.static('/tmp/uploads'));
+// Crucial line for rendering on a live server (Render/GitHub)
 app.use(express.static(__dirname));
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
 
-app.get('/logo.jpg', (req, res) => {
-    res.sendFile(path.join(__dirname, 'logo.jpg'));
-});
+const CHANNEL_URL = 'https://t.me/s/sasta_store_offers';
+let latestOffers = [];
 
-app.get('/favicon.png', (req, res) => {
-    res.sendFile(path.join(__dirname, 'favicon.png'));
-});
+async function fetchTelegramWeb() {
+    try {
+        const { data } = await axios.get(CHANNEL_URL);
+        const $ = cheerio.load(data);
+        const newOffers = [];
+
+        $('.tgme_widget_message').each((i, el) => {
+            const id = $(el).attr('data-post'); 
+            const text = $(el).find('.tgme_widget_message_text').text();
+
+            let imageUrl = null;
+            const photoWrap = $(el).find('.tgme_widget_message_photo_wrap');
+            if (photoWrap.length > 0) {
+                const style = photoWrap.attr('style');
+                const match = style.match(/url\('(.*?)'\)/);
+                if (match) imageUrl = match[1];
+            }
+
+            if (text || imageUrl) {
+                newOffers.unshift({
+                    id: id ? id.split('/')[1] : null,
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -44,7 +39,6 @@ async function fetchTelegramWeb() {
+  
+                    text: text || 'Exclusive Telegram Deal!',
+                    image: imageUrl
+                });
+            }
+        });
+
+        latestOffers = newOffers.slice(0, 12);
+        console.log(`[Success] Scraped ${latestOffers.length} offers from Telegram!`);
 
 
-if (!fs.existsSync('/tmp/uploads')) {
-    fs.mkdirSync('/tmp/uploads', { recursive: true });
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -53,19 +47,15 @@ async function fetchTelegramWeb() {
+  
+    } catch (error) {
+        console.error("Error scraping Telegram:", error.message);
+    }
 }
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => { 
-        cb(null, '/tmp/uploads/'); 
-    },
-    filename: (req, file, cb) => {
-        const utr = req.body.utr || 'unknown';
-        cb(null, `${utr}-${Date.now()}${path.extname(file.originalname)}`);
-    }
-});
-const upload = multer({ storage: storage });
+fetchTelegramWeb();
+setInterval(fetchTelegramWeb, 60000);
 
-// Local database state array
-const submissions = [];
-
-// Endpoint to log verification data from user browser
-const FormDataHelper = require('form-data'); // Add this near the top of server.js
-
-// 1. Ensure Multer is using memory storage
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-
-// 2. Updated anonymous cloud pipeline upload route
-app.post('/api/verify-payment', upload.single('screenshot'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, error: "No file uploaded" });
-        }
-
-        // Build standard multi-part file upload format programmatically
-        const form = new FormDataHelper();
-        form.append('file', req.file.buffer, {
-            filename: req.file.originalname,
-            contentType: req.file.mimetype,
-        });
-
-        // Sending to a free anonymous API pipeline (No API keys or signup required)
-        const cloudResponse = await fetch('https://tmpfiles.org/api/v1/upload', {
-            method: 'POST',
-            body: form,
-            headers: form.getHeaders()
-        });
-
-        const cloudData = await cloudResponse.json();
-
-        if (!cloudResponse.ok || !cloudData.data || !cloudData.data.url) {
-            return res.status(500).json({ success: false, error: "Anonymous file transfer failed" });
-        }
-
-        // The default returned URL looks like: https://tmpfiles.org/12345/file.jpg
-        // We modify it slightly to: https://tmpfiles.org/dl/12345/file.jpg to make it a direct image download/view link
-        const directImageUrl = cloudData.data.url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
-
-        const data = {
-            id: `INV-${1000 + submissions.length + 1}`,
-            clientName: req.body.clientName || "Valued Client",
-            appUsed: req.body.app,
-            utrNumber: req.body.utr,
-            screenshotPath: directImageUrl, // Stored as a simple, small web link!
-            submittedAt: new Date().toLocaleDateString('en-IN'),
-            approved: false
-        };
-
-        submissions.push(data);
-        res.status(200).json({ success: true, data: data });
-
-    } catch (err) {
-        console.error("Backend Upload Error:", err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-// Admin Panel showing incoming logs with live invoice compilation controls
-app.get('/admin/proofs', (req, res) => {
-    let tableRows = '';
-    submissions.forEach(item => {
-        tableRows += `
-            <tr>
-                <td>${item.id}</td>
-                <td>${item.submittedAt}</td>
-                <td>${item.clientName}</td>
-                <td>${item.appUsed}</td>
-                <td style="font-weight: bold; color: #dfcaa7;">${item.utrNumber}</td>
-                <td>
-                    ${item.screenshotPath ? 
-                        `<img src="${item.screenshotPath}" width="80" style="border: 1px solid #1e293b; cursor: pointer;" onclick="viewImage('${item.screenshotPath}')">` : 
-                        `<span style="color:#636f8a;">No Image</span>`
-                    }
-                </td>
-                <td>
-                    ${item.approved ? 
-                        `<a href="/admin/invoice/${item.id}" target="_blank" style="color: #10b981; text-decoration:none; font-weight:bold;">📄 View Active Bill</a>` : 
-                        `<button onclick="approvePayment('${item.id}')" style="background:#dfcaa7; border:none; padding:6px 12px; font-weight:bold; cursor:pointer; border-radius:4px;">Approve & Bill</button>`
-                    }
-                </td>
-            </tr>`;
-    });
-
-    res.send(`
-        <html>
-        <head>
-            <title>Codeland Admin Portal</title>
-            <style>
-                body { font-family: sans-serif; background: #07090e; color: #fff; padding: 3rem; }
-                table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
-                th, td { border: 1px solid #1e293b; padding: 14px; text-align: left; }
-                th { background: #0d111a; color: #dfcaa7; }
-                img { border-radius: 4px; display: block; max-height: 50px; object-fit: contain; }
-                
-                /* Modal Styling */
-                .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; }
-                .modal-content { max-width: 90%; max-height: 90%; border: 2px solid #dfcaa7; border-radius: 8px; }
-                .close-btn { position: absolute; top: 20px; right: 35px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; }
-            </style>
-            <script>
-                function approvePayment(id) {
-                    fetch('/api/approve-payment', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ id: id })
-                    }).then(() => window.location.reload());
-                }
-
-                // Modal Functions to bypass URI_TOO_LONG
-                function viewImage(src) {
-                    const modal = document.getElementById('imgModal');
-                    const modalImg = document.getElementById('modalTarget');
-                    modal.style.display = "flex";
-                    modalImg.src = src;
-                }
-                function closeModal() {
-                    document.getElementById('imgModal').style.display = "none";
-                }
-            </script>
-        </head>
-        <body>
-            <h2 style="color: #dfcaa7;">Codeland Creations — Client Audit Desk</h2>
-            <table>
-                <tr><th>Invoice ID</th><th>Date</th><th>Client Name</th><th>App</th><th>UTR / Ref Number</th><th>Screenshot</th><th>Action Panel</th></tr>
-                ${tableRows || '<tr><td colspan="7" style="text-align:center; color:#636f8a;">No transactions awaiting clearance.</td></tr>'}
-            </table>
-
-            <!-- Lightbox Modal container -->
-            <div id="imgModal" class="modal" onclick="closeModal()">
-                <span class="close-btn">&times;</span>
-                <img class="modal-content" id="modalTarget" style="max-height: 85vh;">
-            </div>
-        </body>
-        </html>
-    `);
+app.get('/api/offers', (req, res) => {
+    res.json(latestOffers);
 });
 
-// Trigger Approval state parameter toggles
-app.post('/api/approve-payment', (req, res) => {
-    const order = submissions.find(item => item.id === req.body.id);
-    if (order) order.approved = true;
-    res.json({ success: true });
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Web Scraper Server running on port ${PORT}`);
+    console.log(`Listening to public channel: ${CHANNEL_URL}`);
 });
-
-// Production Invoice Template Generator
-app.get('/admin/invoice/:id', (req, res) => {
-    const order = submissions.find(item => item.id === req.params.id);
-    if (!order || !order.approved) return res.status(404).send("Invoice missing or verification pending clearance.");
-
-    res.send(`
-        <html>
-        <head>
-            <title>Invoice ${order.id}</title>
-            <style>
-                body { font-family: 'Segoe UI', sans-serif; color: #333; padding: 40px; background: #fff; }
-                .invoice-box { max-width: 800px; margin: auto; border: 1px solid #eee; padding: 30px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.05); }
-                .header { display: flex; justify-content: space-between; border-bottom: 2px solid #dfcaa7; padding-bottom: 20px; }
-                .meta-table { width: 100%; margin-top: 30px; border-collapse: collapse; }
-                .meta-table td { padding: 8px 0; }
-                .items-table { width: 100%; margin-top: 40px; border-collapse: collapse; }
-                .items-table th { background: #0f172a; color: #fff; padding: 12px; text-align: left; }
-                .items-table td { padding: 12px; border-bottom: 1px solid #eee; }
-                .total { text-align: right; font-size: 1.5rem; margin-top: 30px; font-weight: bold; color: #0f172a; }
-                @media print { .print-btn { display: none; } }
-            </style>
-        </head>
-        <body>
-            <div class="invoice-box">
-                <button class="print-btn" onclick="window.print()" style="float:right; background:#0f172a; color:white; border:none; padding:10px 20px; color:#fff; font-weight:bold; cursor:pointer; border-radius:4px; margin-bottom:20px;">Print / Save PDF</button>
-                <div style="clear:both;"></div>
-                <div class="header">
-                    <div>
-                        <h2 style="margin:0; color:#0f172a; letter-spacing:1px;">CODELAND CREATIONS</h2>
-                        <p style="font-size:0.9rem; color:#666; margin:5px 0 0 0;">Bespoke Premium Digital Architecture</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <h1 style="margin:0; font-weight:300; color:#999;">INVOICE</h1>
-                        <p style="margin:5px 0 0 0; font-weight:bold;">${order.id}</p>
-                    </div>
-                </div>
-                <table class="meta-table">
-                    <tr>
-                        <td><strong>Billed To:</strong><br>${order.clientName}</td>
-                        <td style="text-align:right;"><strong>Date:</strong> ${order.submittedAt}<br><strong>UTR Ref:</strong> ${order.utrNumber}</td>
-                    </tr>
-                </table>
-                <table class="items-table">
-                    <tr><th>Description</th><th>Qty</th><th style="text-align:right;">Amount</th></tr>
-                    <tr><td>Project Initiation Retainer Engagement Fee</td><td>1</td><td style="text-align:right;">₹7,500.00</td></tr>
-                </table>
-                <div class="total">Total Paid: ₹7,500.00</div>
-                <p style="margin-top:60px; font-size:0.85rem; color:#999; text-align:center;">This is a system-generated electronic receipt confirming successful settlement clearance.</p>
-            </div>
-            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem;">Terms & Scope:</h4>
-                    <p style="font-size: 0.8rem; color: #555; line-height: 1.4;">
-                        This invoice covers professional architecture and design services only. 
-                        <strong>Note: Third-party costs, including domain name registration, 
-                        hosting subscriptions, and premium plugin licenses, are not included 
-                        in this retainer fee and must be settled separately by the client.</strong>
-                    </p>
-                </div>
-
-        </body>
-        </html>
-    `);
-});
-
-// Legal documents and listen blocks...
-app.get('/privacy-policy', (req, res) => { res.send(`
-        <html>
-        <head>
-            <title>Privacy Policy — Codeland Creations</title>
-            <style>
-                body { font-family: sans-serif; background: #07090e; color: #fff; padding: 4rem 2rem; line-height: 1.6; }
-                .container { max-width: 750px; margin: auto; }
-                h1, h2 { color: #dfcaa7; font-family: serif; font-weight: normal; }
-                h1 { border-bottom: 1px solid #1e293b; padding-bottom: 1rem; margin-bottom: 2rem; }
-                p { color: #8e9bb4; font-size: 0.95rem; margin-bottom: 1.5rem; }
-                footer { margin-top: 4rem; text-align: center; color: #636f8a; font-size: 0.85rem; border-top: 1px solid #1e293b; padding-top: 2rem; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Privacy Policy</h1>
-                <p>At Codeland Creations, your digital asset clearance logistics are fully confidential. We protect the transaction indices and auditing telemetry processed through our settlement networks.</p>
-                <h2>1. Information Logging</h2>
-                <p>When executing service clearings, our engine saves transaction identifiers including structural configuration metadata, verification payload screenshots, and payment tracking indices (UTR reference strings).</p>
-                <h2>2. Data Protection Frameworks</h2>
-                <p>All recorded operational details are hosted within closed parameters to safeguard records against systemic breaches or unauthenticated administrative retrieval.</p>
-                <footer>
-                    &copy; 2026 Codeland Creations. All Rights Reserved.
-                </footer>
-            </div>
-        </body>
-        </html>
-    `);
-});
-
-app.get('/terms-conditions', (req, res) => { res.send(`
-        <html>
-        <head>
-            <title>Terms & Conditions — Codeland Creations</title>
-            <style>
-                body { font-family: sans-serif; background: #07090e; color: #fff; padding: 4rem 2rem; line-height: 1.6; }
-                .container { max-width: 750px; margin: auto; }
-                h1, h2 { color: #dfcaa7; font-family: serif; font-weight: normal; }
-                h1 { border-bottom: 1px solid #1e293b; padding-bottom: 1rem; margin-bottom: 2rem; }
-                p { color: #8e9bb4; font-size: 0.95rem; margin-bottom: 1.5rem; }
-                .highlight-box { background: #0d111a; border-left: 3px solid #dfcaa7; padding: 1.5rem; margin: 2rem 0; border-radius: 0 8px 8px 0; }
-                .highlight-box p { color: #fff; margin: 0; font-size: 1rem; }
-                footer { margin-top: 4rem; text-align: center; color: #636f8a; font-size: 0.85rem; border-top: 1px solid #1e293b; padding-top: 2rem; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Terms & Conditions</h1>
-                <p>Welcome to Codeland Creations. By engaging our design pipelines or initializing development architecture workflows, you consent to fulfill our legal operational guidelines.</p>
-                <h2>1. Service Scope Framework</h2>
-                <p>All agreements establish functional milestones exclusively assigned to technical framework development sprints and layout production structures.</p>
-                <div class="highlight-box">
-                    <p><strong>Scope Clarification:</strong> This invoice covers professional architecture and design services only. Note: Third-party costs, including domain name registration, hosting subscriptions, and premium plugin licenses, are not included in this retainer fee and must be settled separately by the client.</p>
-                </div>
-                <h2>2. Settlement Procedures</h2>
-                <p>Design pipeline sprint documentation will clear instantly upon execution verification by our audit desk infrastructure. Retainer allocations remain fixed under execution protocols.</p>
-                <footer>
-                    &copy; 2026 Codeland Creations. All Rights Reserved.
-                </footer>
-            </div>
-`);
-});
-
-app.listen(3000, () => { console.log('Secure Server processing queries on port 3000')});
-
-module.exports = app;
